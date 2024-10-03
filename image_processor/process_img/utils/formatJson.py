@@ -8,6 +8,9 @@ def combine_json_files(success_file_path, failed_file_path, output_file_path=Non
         with open(failed_file_path, 'r') as failed_file:
             failed_data = json.load(failed_file)
 
+        if success_data is None or (isinstance(success_data, dict) and not success_data):
+            raise ValueError("Success data is empty.")
+
         combined_data = {
             "success": success_data,
             "failed": failed_data
@@ -25,4 +28,7 @@ def combine_json_files(success_file_path, failed_file_path, output_file_path=Non
         return None
     except json.JSONDecodeError as e:
         print(f"Error decoding JSON: {e}")
+        return None
+    except ValueError as e:
+        print(f"Value Error: {e}")
         return None

@@ -7,11 +7,7 @@ from dotenv import load_dotenv
 from celery import shared_task
 
 load_dotenv()
-voter_data_path = os.getenv('VOTER_DATA_PATH')
-missed_voter_pages_path = os.getenv('MISSED_VOTER_PAGES_PATH')
-all_voters = []
-missed_voter_pages=[]
-isValidImage = False
+
 
 def is_valid_voter(voter):
     voter_id_pattern = r'\d{3,}'
@@ -168,6 +164,11 @@ def check_valid_image(header):
 
 @shared_task
 def extract_voter_data(folder_path):
+    voter_data_path = os.getenv('VOTER_DATA_PATH')
+    missed_voter_pages_path = os.getenv('MISSED_VOTER_PAGES_PATH')
+    print("Voter Data Path:", voter_data_path)
+    print("Missed Voter Pages Path:", missed_voter_pages_path)
+    isValidImage = True
     all_voters = []
     missed_voter_pages=[]
 
@@ -179,41 +180,39 @@ def extract_voter_data(folder_path):
             print(i)
             i=i+1
             if filename.endswith(".png") or filename.endswith(".jpg"):
-                image_path = os.path.join(folder_path, filename)
-                image = Image.open(image_path)
-                ocr_text = pytesseract.image_to_string(image)
-                cleaned_text = re.sub(r'[^\w\s]', '', ocr_text)
-                marker = "Electoral roll updated on"
-                pos = cleaned_text.find(marker)
-                cleaned_text =cleaned_text[:pos].strip()
-                sections = split_section(cleaned_text)
-                header, header_text, numbers = process_header(sections[0])
-                if isValidImage == False:
-                    check_valid_image(header_text)
-                
-                if j==1:
-                    j, constituency_No,part_No, constituency_Name = process_constituency_part(j,numbers[0], header[0],header_text)
-                if constituency_No in numbers:
-                    numbers.remove(constituency_No)
+                    image_path = os.path.join(folder_path, filename)
+                    image = Image.open(image_path)
+                    ocr_text = pytesseract.image_to_string(image)
+                    cleaned_text = re.sub(r'[^\w\s]', '', ocr_text)
+                    marker = "Electoral roll updated on"
+                    pos = cleaned_text.find(marker)
+                    cleaned_text =cleaned_text[:pos].strip()
+                    sections = split_section(cleaned_text)
+                    header, header_text, numbers = process_header(sections[0])
+                    if isValidImage == False:
+                        check_valid_image(header_text)
+                    
+                    if j==1:
+                        j, constituency_No,part_No, constituency_Name = process_constituency_part(j,numbers[0], header[0],header_text)
+                    if constituency_No in numbers:
+                        numbers.remove(constituency_No)
 
-                if part_No in numbers:
-                    numbers.remove(part_No)
-                ward_No = ""
-                if(len(numbers)>1):
-                    ward_No = numbers[1]
+                    if part_No in numbers:
+                        numbers.remove(part_No)
+                    ward_No = ""
+                    if(len(numbers)>1):
+                        ward_No = numbers[1]
 
-                section_Name = ""
-                if(len(numbers) > 1):
-                    section_Name = process_section_name(header[1],constituency_No, ward_No, part_No)
-                
-                voters, total_voter_ids = process_sections(sections[1:], part_No, ward_No, constituency_No, constituency_Name, section_Name)
-                print("Total voters in ",filename[-6:]," ---->",len(voters))
-                all_voters.extend(voters)
-                total_voters_perImage = len(voters)
-                total_voter_ids_perImage = (len(voters)+total_voter_ids)
-                if (total_voter_ids_perImage!=total_voters_perImage):
-                    missed_voter_pages.append(process_missed_voters(filename))
-        print("total voter : ", len(all_voters))
+                    section_Name = ""
+                    if(len(numbers) > 1):
+                        section_Name = process_section_name(header[1],constituency_No, ward_No, part_No)
+                    
+                    voters, total_voter_ids = process_sections(sections[1:], part_No, ward_No, constituency_No, constituency_Name, section_Name)
+                    all_voters.extend(voters)
+                    total_voters_perImage = len(voters)
+                    total_voter_ids_perImage = (len(voters)+total_voter_ids)
+                    if (total_voter_ids_perImage!=total_voters_perImage):
+                        missed_voter_pages.append(process_missed_voters(filename))
         voters_json = json.dumps(all_voters, indent=4)
         missedVoterPage = json.dumps(missed_voter_pages, indent=4)
 

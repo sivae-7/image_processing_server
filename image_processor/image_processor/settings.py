@@ -77,7 +77,7 @@ WSGI_APPLICATION = 'image_processor.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'pdftextdb',
+        'NAME': 'test1',
         'USER': 'postgres',
         'PASSWORD': 'root',
         'HOST': 'localhost',
